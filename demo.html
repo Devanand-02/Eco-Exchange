@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco-Exchange Demo</title>
+    <style>
+    body { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh; 
+        margin: 0; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        background-color: #f0f2f5; 
+    }
+    .phone-container { 
+        width: 390px; 
+        height: 844px; 
+        background-color: #ffffff; 
+        border-radius: 40px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        overflow: hidden; 
+        display: flex; 
+        flex-direction: column; 
+        padding: 20px; 
+        box-sizing: border-box; 
+        position: relative; 
+    }
+    .screen { 
+        display: none; 
+        flex-direction: column; 
+        height: 100%; 
+        width: 100%; 
+        /* ADDED: Consistent spacing between elements */
+        gap: 15px; 
+        /* ADDED: Allow scrolling if content overflows */
+        overflow-y: auto;
+    }
+    .screen.active { 
+        display: flex; 
+    }
+    h1, h2 { 
+        text-align: center; 
+        color: #333;
+        /* ADDED: Remove default margins for better control */
+        margin: 0;
+        padding-bottom: 10px;
+    }
+    .center-content { 
+        justify-content: center; 
+        align-items: center; 
+        text-align: center; 
+    }
+    .logo { 
+        font-size: 50px; 
+    }
+    .main-button { 
+        width: 80%; 
+        padding: 15px; 
+        background-color: #28a745; 
+        color: white; 
+        border: none; 
+        border-radius: 25px; 
+        font-size: 18px; 
+        font-weight: bold; 
+        cursor: pointer; 
+        align-self: center;
+    }
+    .role-button { 
+        width: 100%; 
+        padding: 25px; 
+        border: 1px solid #e0e0e0; 
+        border-radius: 10px; 
+        cursor: pointer; 
+        font-size: 18px; 
+        text-align: center; 
+    }
+    .grid-container { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 15px; 
+    }
+    .grid-item { 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 20px; 
+        border: 1px solid #e0e0e0; 
+        border-radius: 10px; 
+        cursor: pointer; 
+    }
+    .grid-item span { 
+        font-size: 40px; 
+    }
+    .grid-item p { 
+        margin-top: 10px; 
+        font-weight: 500; 
+    }
+    textarea, input[type="text"], input[type="number"] { 
+        width: 100%; 
+        padding: 15px; 
+        border: 1px solid #e0e0e0; 
+        border-radius: 10px; 
+        font-size: 16px; 
+        box-sizing: border-box; 
+    }
+    textarea { 
+        height: 120px; 
+        resize: none; 
+    }
+    .submit-button { 
+        width: 100%; 
+        padding: 15px; 
+        background-color: #28a745; 
+        color: white; 
+        border: none; 
+        border-radius: 10px; 
+        font-size: 18px; 
+        font-weight: bold; 
+        cursor: pointer;
+        /* REMOVED: margin-top: auto; was causing the large gap */
+        /* ADDED: Add a little space from the element above it */
+        margin-top: 10px;
+    }
+    /* ADDED: Specific rule to push buttons to the bottom ONLY on certain screens */
+    #confirm-post-button, #request-button {
+        margin-top: auto;
+    }
+    #browse-list { 
+        overflow-y: auto; 
+        flex-grow: 1; 
+    }
+    .list-item { 
+        display: flex; 
+        align-items: center; 
+        padding: 10px; 
+        border-bottom: 1px solid #eee; 
+        cursor: pointer; 
+    }
+    .list-item-icon { 
+        font-size: 30px; 
+        width: 50px; 
+        height: 50px; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        background-color: #f0f2f5; 
+        border-radius: 10px; 
+        margin-right: 15px; 
+    }
+    .list-item-icon img { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+        border-radius: 10px;
+    }
+    .list-item-details h3 { 
+        margin: 0; 
+        font-size: 16px; 
+    }
+    .list-item-details p { 
+        margin: 5px 0 0; 
+        font-size: 14px; 
+        color: #666; 
+    }
+    #item-details-content { 
+        padding: 10px; 
+        flex-grow: 1; 
+        overflow-y: auto; 
+    }
+    .back-button { 
+        position: absolute; 
+        top: 30px; 
+        left: 30px; 
+        font-size: 24px; 
+        cursor: pointer; 
+        font-weight: bold; 
+        z-index: 10; 
+    }
+    .item-detail-image { 
+        width: 100%; 
+        height: 200px; 
+        object-fit: cover; 
+        border-radius: 10px; 
+        margin-bottom: 15px; 
+    }
+    .detail-section h3 { 
+        border-bottom: 2px solid #eee; 
+        padding-bottom: 5px; 
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+    <div class="phone-container">
+        <div id="screen-welcome" class="screen active center-content">
+            <span class="logo">🌿</span>
+            <h1>Eco-Exchange</h1>
+            <p>Connect. Share. Reuse.</p>
+            <button id="start-button" class="main-button">Start</button>
+        </div>
+
+        <div id="screen-select-role" class="screen">
+            <h2>Select Your Role</h2>
+            <div id="donor-button" class="role-button">🙋‍♂️<br>Donor<br><small>I'm here to give</small></div>
+            <div id="recoverer-button" class="role-button">🙋‍♀️<br>Recoverer<br><small>I'm looking for items</small></div>
+        </div>
+
+        <div id="screen-select-type" class="screen">
+            <div id="back-to-role" class="back-button">←</div>
+            <h2>Select Waste Type</h2>
+            <div class="grid-container">
+                <div class="grid-item" data-category="Organic"><span>🌱</span><p>Organic</p></div>
+                <div class="grid-item" data-category="Fabric"><span>👕</span><p>Fabric</p></div>
+                <div class="grid-item" data-category="Metal"><span>🔩</span><p>Metal</p></div>
+               <div class="grid-item" data-category="Glass"><span>🍾</span><p>Glass</p></div>
+                <div class="grid-item" data-category="Paper"><span>📄</span><p>Paper</p></div>
+                <div class="grid-item" data-category="E-waste"><span>🔋</span><p>E-waste</p></div>
+            </div>
+        </div>
+
+        <div id="screen-describe" class="screen">
+            <div id="back-to-type" class="back-button">←</div>
+            <h2>Describe & Upload</h2>
+            <textarea id="description-input" placeholder="e.g., 'Gently used cardboard boxes...'"></textarea>
+            <input type="number" id="quantity-input" placeholder="Quantity (e.g., 5)" min="1">
+           <button id="pin-location-btn" class="submit-button" style="background-color: #007bff;">Pin Pickup Location</button>
+            <div id="map" style="height: 200px; width: 100%; margin-top: 10px; display: none;"></div>
+            <label for="photo-input" class="submit-button" style="text-align: center; margin-top: 15px; background-color: #007bff; cursor: pointer;">Upload Photo</label>
+            <input type="file" id="photo-input" accept="image/*" style="display: none;">
+            <img id="photo-preview" src="#" alt="Photo Preview" style="max-width: 100px; max-height: 100px; margin-top: 10px; display: none; align-self: center; border-radius: 10px;">
+            <button id="review-button" class="submit-button">Review</button>
+        </div>
+
+        <div id="screen-summary" class="screen">
+            <div id="back-to-describe" class="back-button">←</div>
+            <h2>Summary</h2>
+            <div id="summary-content" style="flex-grow: 1; overflow-y: auto;"></div>
+            <button id="confirm-post-button" class="submit-button">Confirm & Post</button>
+        </div>
+
+        <div id="screen-browse" class="screen">
+            <div id="back-to-role-browse" class="back-button">←</div>
+            <h2>Browse Available List</h2>
+            <div id="browse-list"></div>
+        </div>
+        
+        <div id="screen-item-details" class="screen">
+            <div id="back-to-browse" class="back-button">←</div>
+            <h2 id="item-details-title">Item Details</h2>
+            <div id="item-details-content"></div>
+            <button id="request-button" class="submit-button" style="margin-top: 10px;">Request</button>
+        </div>
+    </div>
+
+<script>
+    let selectedCategory = '';
+    let mockDatabase = []; 
+    let currentOfferData = {};
+
+    let map;
+    let marker;
+    document.getElementById('pin-location-btn').addEventListener('click', () => {
+    document.getElementById('map').style.display = 'block';
+    if (!map) {
+        map = L.map('map').setView([10.0579, 76.6225], 13); // Centered on Kothamangalam
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        marker = L.marker([10.0579, 76.6225], { draggable: true }).addTo(map);
+        // This new version saves a simple, plain object
+marker.on('dragend', (e) => {
+    const coords = e.target.getLatLng();
+    currentOfferData.location = { lat: coords.lat, lng: coords.lng }; // CORRECTED LINE
+    console.log('Location saved as simple object:', currentOfferData.location);
+});
+    }
+});
+
+    const screens = {
+        welcome: document.getElementById('screen-welcome'),
+        selectRole: document.getElementById('screen-select-role'),
+        selectType: document.getElementById('screen-select-type'),
+        describe: document.getElementById('screen-describe'),
+        summary: document.getElementById('screen-summary'),
+        browse: document.getElementById('screen-browse'),
+        itemDetails: document.getElementById('screen-item-details')
+    };
+
+    function showScreen(screenName) {
+        Object.values(screens).forEach(s => s.classList.remove('active'));
+        screens[screenName].classList.add('active');
+    }
+
+    // --- Navigation Event Listeners ---
+    document.getElementById('start-button').addEventListener('click', () => showScreen('selectRole'));
+    document.getElementById('donor-button').addEventListener('click', () => showScreen('selectType'));
+    document.getElementById('recoverer-button').addEventListener('click', () => {
+        fetchAndDisplayOffers();
+        showScreen('browse');
+    });
+    document.querySelectorAll('.grid-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectedCategory = btn.getAttribute('data-category');
+            showScreen('describe');
+        });
+    });
+
+    // Back Buttons
+    document.getElementById('back-to-role').addEventListener('click', () => showScreen('selectRole'));
+    document.getElementById('back-to-type').addEventListener('click', () => showScreen('selectType'));
+    document.getElementById('back-to-role-browse').addEventListener('click', () => showScreen('selectRole'));
+    document.getElementById('back-to-browse').addEventListener('click', () => showScreen('browse'));
+    document.getElementById('back-to-describe').addEventListener('click', () => showScreen('describe'));
+
+    // --- MODIFIED: Recoverer Flow Logic using Electron API ---
+    async function fetchAndDisplayOffers() {
+        try {
+            mockDatabase = await window.electronAPI.getOffers();
+            
+            const browseList = document.getElementById('browse-list');
+            browseList.innerHTML = '';
+            
+            if (mockDatabase.length === 0) {
+                browseList.innerHTML = '<p style="text-align:center; margin-top: 40px;">No items available right now.</p>';
+            }
+
+            mockDatabase.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'list-item';
+                itemDiv.innerHTML = `
+                    <div class="list-item-icon">
+                       <img src="${item.imageUrl || 'https://via.placeholder.com/50'}" alt="${item.category}">
+                    </div>
+                    <div class="list-item-details">
+                        <h3>${item.category}</h3>
+                        <p>${item.location || 'Unknown location'}</p>
+                        <p>${item.description.substring(0, 30)}...</p>
+                    </div>`;
+                itemDiv.addEventListener('click', () => displayItemDetails(item.id));
+                browseList.appendChild(itemDiv);
+            });
+
+        } catch (error) {
+            console.error("Failed to fetch offers via Electron API:", error);
+            document.getElementById('browse-list').innerHTML = '<p>Could not load items.</p>';
+        }
+    }
+
+    function displayItemDetails(itemId) {
+    const item = mockDatabase.find(i => i.id === itemId);
+    if (!item) return;
+
+    // --- Start of Modified Location Logic ---
+    let locationHTML = '<p>Location was not pinned on the map.</p>';
+    // Check if location object with lat/lng exists
+    if (item.location && item.location.lat && item.location.lng) {
+        // Create a directions URL for OpenStreetMap
+        const directionsURL = `https://www.openstreetmap.org/directions?to=${item.location.lat},${item.location.lng}`;
+        
+        // Create a clickable link styled like a button
+        locationHTML = `<a href="${directionsURL}" target="_blank" class="submit-button" style="text-decoration: none; text-align: center; display: block; margin-top: 5px;">Get Directions</a>`;
+    }
+    // --- End of Modified Location Logic ---
+
+    document.getElementById('item-details-title').innerText = item.category;
+    
+    // Set the entire content, including the new locationHTML
+    document.getElementById('item-details-content').innerHTML = `
+        <img src="${item.imageUrl || 'https://via.placeholder.com/350x200'}" alt="${item.category}" class="item-detail-image">
+        
+        <div class="detail-section">
+            <h3>Description</h3>
+            <p>${item.description}</p>
+        </div>
+        
+        <div class="detail-section">
+            <h3>Quantity</h3>
+            <p>${item.quantity || 'Not specified'}</p>
+        </div>
+        
+        <div class="detail-section">
+            <h3>Location</h3>
+            ${locationHTML} 
+        </div>
+
+        <div class="detail-section">
+            <h3>Posted</h3>
+            <p>${new Date(item.timestamp || Date.now()).toLocaleString()}</p>
+        </div>
+
+        <div class="detail-section">
+            <h3>Provider</h3>
+            <p>${item.provider}</p>
+        </div>
+    `;
+    
+    showScreen('itemDetails');
+}
+    
+    // --- Donor Flow Logic ---
+    document.getElementById('photo-input').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+           reader.onload = async (e) => { // Make the function async
+    const preview = document.getElementById('photo-preview');
+    currentOfferData.imageUrl = e.target.result; // Save as base64
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+
+    // NEW: Call Gemini to get tags and fill the description
+    const tagResult = await window.electronAPI.getImageTags(currentOfferData.imageUrl);
+    if (tagResult.success) {
+        document.getElementById('description-input').value = tagResult.tags;
+    }
+};
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('review-button').addEventListener('click', () => {
+    const description = document.getElementById('description-input').value;
+    const quantity = document.getElementById('quantity-input').value;
+
+    // The location is now an object in currentOfferData from the map
+    // We check for it directly in the if statement
+    if (!description || !quantity || !currentOfferData.location || !currentOfferData.imageUrl) {
+        return alert("Please fill in all fields, upload a photo, and pin the location on the map.");
+    }
+
+    // Save the final values to the main object
+    currentOfferData.description = description;
+    currentOfferData.quantity = quantity;
+    // The category and imageUrl are already saved
+    
+    // Populate summary screen
+    document.getElementById('summary-content').innerHTML = `
+        <img src="${currentOfferData.imageUrl}" alt="Preview" class="item-detail-image">
+        <div class="detail-section"><h3>Category</h3><p>${currentOfferData.category}</p></div>
+        <div class="detail-section"><h3>Description</h3><p>${currentOfferData.description}</p></div>
+        <div class="detail-section"><h3>Quantity</h3><p>${currentOfferData.quantity}</p></div>
+        <div class="detail-section"><h3>Location</h3><p>Location Pinned on Map</p></div>
+    `;
+    showScreen('summary');
+});
+
+    // --- MODIFIED: Confirm button using Electron API ---
+    document.getElementById('confirm-post-button').addEventListener('click', async () => {
+        const offerData = {
+            category: currentOfferData.category,
+            description: currentOfferData.description,
+            quantity: currentOfferData.quantity,
+            location: currentOfferData.location,
+            imageUrl: currentOfferData.imageUrl,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            const result = await window.electronAPI.createWasteOffer(offerData);
+            if (result.success) {
+                alert("Success! Your offer has been posted.");
+                document.getElementById('description-input').value = '';
+                document.getElementById('quantity-input').value = '';
+                document.getElementById('location-input').value = '';
+                document.getElementById('photo-input').value = null;
+                document.getElementById('photo-preview').style.display = 'none';
+                currentOfferData = {};
+                showScreen('selectRole');
+            } else { alert("Something went wrong."); }
+        } catch (error) {
+            console.error("Error posting offer via Electron API:", error);
+            alert("An error occurred with the application.");
+        }
+    });
+    
+    document.getElementById('request-button').addEventListener('click', () => {
+        alert('Request sent to donor! (Demo)');
+        showScreen('browse');
+    });
+</script>
+</body>
+</html>
