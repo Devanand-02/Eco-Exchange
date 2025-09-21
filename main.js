@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI("AIzaSyDmWZ8gL0gRYhzCp1AnmMcYoBsMnOT9U4k");
+const genAI = new GoogleGenerativeAI("API key google");
 
 // --- In-Memory Mock Database ---
 let mockDatabase = [];
